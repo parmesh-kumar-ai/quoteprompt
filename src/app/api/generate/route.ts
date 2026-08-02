@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import Groq from "groq-sdk";
 import { NextResponse } from 'next/server';
 
 const SYSTEM_PROMPT = `You are an award-winning creative director and prompt engineer specializing in "diary page" quote content for vertical reels (9:16). Every output must follow this exact fixed visual signature — do not vary the core layout:
@@ -32,26 +32,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing or invalid quote' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyDkvGNw4P7csDCecOixdmb-qNV--ctZB80';
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'Server is missing GEMINI_API_KEY.' }, { status: 500 });
+      return NextResponse.json({ error: 'Server is missing GROQ_API_KEY. Please add it to your environment variables.' }, { status: 500 });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const groq = new Groq({ apiKey });
     
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: quote,
-        config: {
-            systemInstruction: SYSTEM_PROMPT,
-            responseMimeType: "application/json",
-            temperature: 0.7,
-        }
+    const response = await groq.chat.completions.create({
+        messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: quote }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.7,
+        response_format: { type: "json_object" }
     });
 
-    const text = response.text;
+    const text = response.choices[0]?.message?.content;
     if (!text) {
-        throw new Error("No text returned from Gemini");
+        throw new Error("No text returned from Groq");
     }
 
     let parsed;
