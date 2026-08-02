@@ -32,11 +32,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing or invalid quote' }, { status: 400 });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: 'Server is missing GEMINI_API_KEY. Set it in your environment variables.' }, { status: 500 });
+    const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyDkvGNw4P7csDCecOixdmb-qNV--ctZB80';
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Server is missing GEMINI_API_KEY.' }, { status: 500 });
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     
     const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
