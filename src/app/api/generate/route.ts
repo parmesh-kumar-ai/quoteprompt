@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import { NextResponse } from 'next/server';
 
 const SYSTEM_PROMPT = `You are an award-winning creative director and prompt engineer specializing in "diary page" quote content for vertical reels (9:16). Every output must follow this exact fixed visual signature — do not vary the core layout:
@@ -32,43 +32,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing or invalid quote' }, { status: 400 });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'Server is missing ANTHROPIC_API_KEY. Set it in your environment variables.' }, { status: 500 });
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'Server is missing GEMINI_API_KEY. Set it in your environment variables.' }, { status: 500 });
     }
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-latest',
-      max_tokens: 1024,
-      temperature: 0.7,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: quote
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: quote,
+        config: {
+            systemInstruction: SYSTEM_PROMPT,
+            responseMimeType: "application/json",
+            temperature: 0.7,
         }
-      ]
     });
 
-    const textBlock = response.content.find(block => block.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
-        throw new Error("No text returned from Anthropic");
-    }
-
-    let cleanText = textBlock.text.trim();
-    // Remove markdown code blocks if the model accidentally includes them
-    if (cleanText.startsWith('\`\`\`json')) {
-      cleanText = cleanText.replace(/^\`\`\`json/, '').replace(/\`\`\`$/, '').trim();
+    const text = response.text;
+    if (!text) {
+        throw new Error("No text returned from Gemini");
     }
 
     let parsed;
     try {
-      parsed = JSON.parse(cleanText);
+      parsed = JSON.parse(text);
     } catch (e) {
-      return NextResponse.json({ error: 'Could not parse model output', raw: cleanText }, { status: 500 });
+      return NextResponse.json({ error: 'Could not parse model output', raw: text }, { status: 500 });
     }
 
     return NextResponse.json(parsed, { status: 200 });
