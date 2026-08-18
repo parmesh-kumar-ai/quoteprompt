@@ -44,7 +44,7 @@ export async function POST(req: Request) {
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: quote }
         ],
-        model: "llama3-70b-8192",
+        model: "llama-3.1-70b-versatile",
         temperature: 0.7,
         response_format: { type: "json_object" }
     });
